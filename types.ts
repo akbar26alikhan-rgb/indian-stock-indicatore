@@ -50,4 +50,5 @@ export interface TradingSignal {
   stopLoss: string;
   reason: string;
   time?: string;
+  strength?: number;
 }
