@@ -1,0 +1,8 @@
+{
+  "name": "NiftyPro: Advanced Indian Market Indicator Dashboard",
+  "description": "A high-performance technical analysis dashboard for the Indian stock market featuring 10 specialized indicator presets for Nifty, Midcaps, and Smallcaps.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
