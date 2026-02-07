@@ -1,17 +1,24 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { StockData, TradingSignal } from "../types";
+import { StockData, TradingSignal, MarketDepth } from "../types";
 
-// Note: For gemini-3-pro-preview, ensure the API key is valid for this model.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export interface MarketAnalysisResponse {
   signals: TradingSignal[];
   historicalData: StockData[];
+  marketDepth: MarketDepth;
   currentPrice: number;
   marketStatus: string;
   sourceUrls: { title: string; uri: string }[];
 }
+
+/**
+ * Utility to strip markdown code blocks from a string
+ */
+const cleanJsonString = (str: string): string => {
+  return str.replace(/```json\n?|```/g, "").trim();
+};
 
 export const getLiveMarketAnalysis = async (symbol: string): Promise<MarketAnalysisResponse> => {
   const prompt = `
@@ -20,14 +27,17 @@ export const getLiveMarketAnalysis = async (symbol: string): Promise<MarketAnaly
     1. The official ticker on NSE or BSE (e.g., RELIANCE.NS or 500325).
     2. The current Live Trading Price (LTP).
     3. A series of approximately 15-20 data points representing the price movement (OHLC) over the current trading session or the last 24 hours. Use actual market timestamps.
-    4. Technical indicators based on THIS data:
+    4. Market Depth Data: Find the current top 5 bids (buy orders) and top 5 asks (sell orders) with their respective prices and volumes. Calculate the total bid and ask volume.
+    5. Technical indicators based on THIS data:
        - 13-EMA, 20-EMA, 50-SMA
        - RSI (14)
        - MACD (8, 17, 9)
        - Bollinger Bands (18, 1.8)
        - ADX, VWAP, Ichimoku, Parabolic SAR, Stochastic.
     
-    Return a structured JSON including 'historicalData' which is an array of OHLC points with 'time' (HH:mm format).
+    Return a structured JSON including 'historicalData', 'marketDepth', and signals.
+    'historicalData' is an array of OHLC points with 'time' (HH:mm format).
+    'marketDepth' should contain 'bids' (array of {price, volume}), 'asks' (array of {price, volume}), 'totalBidVolume', and 'totalAskVolume'.
     Provide high-probability BUY/SELL signals derived from confluence of these indicators.
     Each signal MUST specify which 'time' from the historicalData it triggered at.
   `;
@@ -57,6 +67,36 @@ export const getLiveMarketAnalysis = async (symbol: string): Promise<MarketAnaly
                 required: ["time", "open", "high", "low", "close", "volume"]
               }
             },
+            marketDepth: {
+              type: Type.OBJECT,
+              properties: {
+                bids: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      price: { type: Type.NUMBER },
+                      volume: { type: Type.NUMBER }
+                    },
+                    required: ["price", "volume"]
+                  }
+                },
+                asks: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      price: { type: Type.NUMBER },
+                      volume: { type: Type.NUMBER }
+                    },
+                    required: ["price", "volume"]
+                  }
+                },
+                totalBidVolume: { type: Type.NUMBER },
+                totalAskVolume: { type: Type.NUMBER }
+              },
+              required: ["bids", "asks", "totalBidVolume", "totalAskVolume"]
+            },
             signals: {
               type: Type.ARRAY,
               items: {
@@ -76,7 +116,7 @@ export const getLiveMarketAnalysis = async (symbol: string): Promise<MarketAnaly
             currentPrice: { type: Type.NUMBER },
             marketStatus: { type: Type.STRING, description: "Bullish, Bearish, or Neutral" }
           },
-          required: ["historicalData", "signals", "currentPrice", "marketStatus"]
+          required: ["historicalData", "marketDepth", "signals", "currentPrice", "marketStatus"]
         }
       }
     });
@@ -84,7 +124,8 @@ export const getLiveMarketAnalysis = async (symbol: string): Promise<MarketAnaly
     const text = response.text;
     if (!text) throw new Error("Empty response from AI");
     
-    const data = JSON.parse(text.trim());
+    const cleanedText = cleanJsonString(text);
+    const data = JSON.parse(cleanedText);
     const sourceUrls = response.candidates?.[0]?.groundingMetadata?.groundingChunks
       ?.map((chunk: any) => ({
         title: chunk.web?.title || "Market Source",

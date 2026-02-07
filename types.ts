@@ -29,6 +29,18 @@ export interface StockData {
   senkouB?: number;
 }
 
+export interface MarketDepthItem {
+  price: number;
+  volume: number;
+}
+
+export interface MarketDepth {
+  bids: MarketDepthItem[];
+  asks: MarketDepthItem[];
+  totalBidVolume: number;
+  totalAskVolume: number;
+}
+
 export interface IndicatorConfig {
   id: string;
   name: string;
