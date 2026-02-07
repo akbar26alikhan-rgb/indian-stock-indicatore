@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { MarketDepth } from '../types';
+import { MarketDepth as MarketDepthType } from '../types';
 
 interface MarketDepthProps {
-  depth?: MarketDepth;
+  depth?: MarketDepthType;
 }
 
 const MarketDepth: React.FC<MarketDepthProps> = ({ depth }) => {
@@ -14,13 +14,13 @@ const MarketDepth: React.FC<MarketDepthProps> = ({ depth }) => {
     </div>
   );
 
-  const total = depth.totalBidVolume + depth.totalAskVolume;
+  const total = (depth.totalBidVolume || 0) + (depth.totalAskVolume || 0);
   const bidPercent = total > 0 ? (depth.totalBidVolume / total) * 100 : 50;
   const askPercent = 100 - bidPercent;
 
   const maxVolume = Math.max(
-    ...depth.bids.map(b => b.volume),
-    ...depth.asks.map(a => a.volume)
+    ...(depth.bids?.map(b => b.volume) || [1]),
+    ...(depth.asks?.map(a => a.volume) || [1])
   );
 
   return (
@@ -45,7 +45,7 @@ const MarketDepth: React.FC<MarketDepthProps> = ({ depth }) => {
             <span>Qty</span>
           </div>
           <div className="space-y-1">
-            {depth.bids.map((bid, i) => (
+            {depth.bids?.map((bid, i) => (
               <div key={i} className="relative group flex justify-between text-[10px] py-0.5 px-1 overflow-hidden">
                 <div 
                   className="absolute right-0 top-0 bottom-0 bg-emerald-500/10 transition-all duration-500" 
@@ -65,7 +65,7 @@ const MarketDepth: React.FC<MarketDepthProps> = ({ depth }) => {
             <span>Qty</span>
           </div>
           <div className="space-y-1">
-            {depth.asks.map((ask, i) => (
+            {depth.asks?.map((ask, i) => (
               <div key={i} className="relative group flex justify-between text-[10px] py-0.5 px-1 overflow-hidden">
                 <div 
                   className="absolute left-0 top-0 bottom-0 bg-rose-500/10 transition-all duration-500" 
@@ -80,8 +80,8 @@ const MarketDepth: React.FC<MarketDepthProps> = ({ depth }) => {
       </div>
 
       <div className="mt-3 pt-2 border-t border-slate-800 flex justify-between text-[9px] font-bold text-slate-500">
-        <span>TOTAL BIDS: <span className="text-slate-300 ml-1">{depth.totalBidVolume.toLocaleString('en-IN')}</span></span>
-        <span>TOTAL ASKS: <span className="text-slate-300 ml-1">{depth.totalAskVolume.toLocaleString('en-IN')}</span></span>
+        <span>TOTAL BIDS: <span className="text-slate-300 ml-1">{(depth.totalBidVolume || 0).toLocaleString('en-IN')}</span></span>
+        <span>TOTAL ASKS: <span className="text-slate-300 ml-1">{(depth.totalAskVolume || 0).toLocaleString('en-IN')}</span></span>
       </div>
     </div>
   );
